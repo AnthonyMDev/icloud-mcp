@@ -45,3 +45,9 @@ htmlcov/
 .venv/
 .ruff_cache/
 # uv.lock is committed in this fork (pinned dependencies)
+
+# Secrets: never commit real settings. Live config is ~/.config/icloud-mcp/env (outside the repo).
+.env.*
+!.env.example
+*.env
+/env
