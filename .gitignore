@@ -44,4 +44,4 @@ htmlcov/
 *.log
 .venv/
 .ruff_cache/
-uv.lock
+# uv.lock is committed in this fork (pinned dependencies)

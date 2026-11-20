@@ -48,15 +48,18 @@ def _request_headers() -> dict:
 
 def get_credentials() -> tuple[str, str]:
     """Return ``(email, app_specific_password)`` for the current request."""
-    headers = _request_headers()
+    email: str | None = None
+    password: str | None = None
 
-    email: str | None = headers.get("x-apple-email")
-    password: str | None = headers.get("x-apple-app-specific-password")
+    if config.ACCEPT_REQUEST_CREDENTIALS:
+        headers = _request_headers()
+        email = headers.get("x-apple-email")
+        password = headers.get("x-apple-app-specific-password")
 
-    if not (email and password):
-        basic_email, basic_password = _from_basic_auth(headers.get("authorization"))
-        email = email or basic_email
-        password = password or basic_password
+        if not (email and password):
+            basic_email, basic_password = _from_basic_auth(headers.get("authorization"))
+            email = email or basic_email
+            password = password or basic_password
 
     if config.ENV_CREDENTIALS_ACTIVE:
         if not email:

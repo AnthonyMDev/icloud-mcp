@@ -86,6 +86,8 @@ def test_parse_categories():
 
 
 def test_http_credential_policy(monkeypatch, caplog):
+    monkeypatch.setattr(config, "GOOGLE_CLIENT_ID", None)
+    monkeypatch.setattr(config, "ALLOW_UNAUTHENTICATED", True)
     monkeypatch.setattr(config, "FALLBACK_EMAIL", "a@icloud.com")
     monkeypatch.setattr(config, "FALLBACK_PASSWORD", "pw")
 

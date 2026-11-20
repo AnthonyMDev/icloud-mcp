@@ -73,7 +73,9 @@ class Config:
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
 
     # MCP transport
-    MCP_SERVER_HOST: str = os.getenv("MCP_SERVER_HOST", "0.0.0.0")
+    # Loopback by default: expose the server through a reverse proxy/tunnel
+    # (e.g. Tailscale Funnel), not directly on every interface.
+    MCP_SERVER_HOST: str = os.getenv("MCP_SERVER_HOST", "127.0.0.1")
     MCP_SERVER_PORT: int = int(os.getenv("PORT", os.getenv("MCP_SERVER_PORT", "8000")))
     MCP_SERVER_PATH: str = os.getenv("MCP_SERVER_PATH", "/mcp")
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -99,6 +101,32 @@ class Config:
     ALLOW_ENV_CREDENTIALS: bool | None = _env_bool("ICLOUD_MCP_ALLOW_ENV_CREDENTIALS", None)
     # Set at startup by server.main(); True unless disabled for an unprotected HTTP server.
     ENV_CREDENTIALS_ACTIVE: bool = True
+
+    # Google OAuth (for claude.ai connectors). Enabled when MCP_GOOGLE_CLIENT_ID is set;
+    # then MCP_GOOGLE_CLIENT_SECRET, MCP_PUBLIC_URL and MCP_ALLOWED_EMAILS are required.
+    GOOGLE_CLIENT_ID: str | None = os.getenv("MCP_GOOGLE_CLIENT_ID") or None
+    GOOGLE_CLIENT_SECRET: str | None = os.getenv("MCP_GOOGLE_CLIENT_SECRET") or None
+    PUBLIC_URL: str | None = os.getenv("MCP_PUBLIC_URL") or None
+    ALLOWED_EMAILS: frozenset[str] = frozenset(
+        x.strip().lower() for x in os.getenv("MCP_ALLOWED_EMAILS", "").split(",") if x.strip()
+    )
+    # OAuth clients may only redirect back to these URIs (claude.ai's connector callback).
+    ALLOWED_CLIENT_REDIRECT_URIS: list[str] = [
+        x.strip()
+        for x in os.getenv(
+            "MCP_ALLOWED_CLIENT_REDIRECT_URIS",
+            "https://claude.ai/api/mcp/auth_callback,https://claude.com/api/mcp/auth_callback",
+        ).split(",")
+        if x.strip()
+    ]
+    # Optional dedicated key for the tokens this server issues (default: derived from the client secret).
+    JWT_SIGNING_KEY: str | None = os.getenv("MCP_JWT_SIGNING_KEY") or None
+    # Refuse to serve HTTP with no authentication at all unless explicitly allowed.
+    ALLOW_UNAUTHENTICATED: bool = bool(_env_bool("ICLOUD_MCP_ALLOW_UNAUTHENTICATED", False))
+
+    # Accept iCloud credentials supplied by the caller (X-Apple-* headers / Basic auth).
+    # Off by default in this single-user fork: only the server's own account is served.
+    ACCEPT_REQUEST_CREDENTIALS: bool = bool(_env_bool("ICLOUD_MCP_ACCEPT_REQUEST_CREDENTIALS", False))
 
     # Size limits
     EMAIL_BODY_MAX_CHARS: int = int(os.getenv("EMAIL_BODY_MAX_CHARS", "20000"))

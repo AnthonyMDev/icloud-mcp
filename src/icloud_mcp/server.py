@@ -556,6 +556,35 @@ def _http_credential_policy() -> list:
     Environment credentials are honoured over HTTP only when MCP_AUTH_TOKEN protects the
     endpoint or the operator opted in with ICLOUD_MCP_ALLOW_ENV_CREDENTIALS=true.
     """
+    if config.GOOGLE_CLIENT_ID:
+        if config.MCP_AUTH_TOKEN:
+            raise SystemExit(
+                "Set either MCP_GOOGLE_CLIENT_ID (OAuth) or MCP_AUTH_TOKEN (static token), not both."
+            )
+        from .google_auth import build_google_auth
+
+        mcp.auth = build_google_auth(
+            client_id=config.GOOGLE_CLIENT_ID,
+            client_secret=config.GOOGLE_CLIENT_SECRET,
+            public_url=config.PUBLIC_URL,
+            allowed_emails=config.ALLOWED_EMAILS,
+            allowed_client_redirect_uris=config.ALLOWED_CLIENT_REDIRECT_URIS,
+            jwt_signing_key=config.JWT_SIGNING_KEY,
+        )
+        # The allow-list guarantees only the owner gets through, so serve the env account.
+        config.ENV_CREDENTIALS_ACTIVE = (
+            True if config.ALLOW_ENV_CREDENTIALS is None else config.ALLOW_ENV_CREDENTIALS
+        )
+        logger.info("Google OAuth enabled for %d allowed account(s)", len(config.ALLOWED_EMAILS))
+        return []
+
+    if not config.MCP_AUTH_TOKEN and not config.ALLOW_UNAUTHENTICATED:
+        raise SystemExit(
+            "Refusing to serve HTTP without authentication. Configure Google OAuth "
+            "(MCP_GOOGLE_CLIENT_ID, ...) or MCP_AUTH_TOKEN, or set "
+            "ICLOUD_MCP_ALLOW_UNAUTHENTICATED=true for a trusted private network."
+        )
+
     has_env_creds = bool(config.FALLBACK_EMAIL and config.FALLBACK_PASSWORD)
     allow_env = config.ALLOW_ENV_CREDENTIALS
     if allow_env is None:
